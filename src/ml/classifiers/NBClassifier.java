@@ -1,12 +1,17 @@
 package ml.classifiers;
 
+import java.util.*;
+
 import ml.data.CrossValidationSet;
 import ml.data.DataSet;
 import ml.data.DataSetSplit;
 import ml.data.Example;
+import ml.utils.*;
+
 /**
  * 
  * Assignment 7
+ * 
  * @author Maddie Gordon, Nick Reminder
  *
  */
@@ -45,10 +50,24 @@ public class NBClassifier implements Classifier {
 		usePosOnly = setting;
 	}
 
+	/**
+	 * Store the counts for each feature in each example.
+	 * 
+	 * @param data
+	 *            DataSet for which we are storing feature counts.
+	 */
 	@Override
 	public void train(DataSet data) {
-		// TODO Auto-generated method stub
-
+		// store raw counts
+		ArrayList<Example> examples = data.getData();
+		ArrayList<HashMapCounter<Double>> words = new ArrayList<HashMapCounter<Double>>();
+		for (Example ex : examples) {
+			HashMapCounter<Double> hm = new HashMapCounter<Double>();
+			for (int i : ex.getFeatureSet()) {
+				hm.put(ex.getFeature(i), 1);
+			}
+			words.add(hm);
+		}
 	}
 
 	@Override
@@ -98,8 +117,8 @@ public class NBClassifier implements Classifier {
 
 	public static void main(String[] args) {
 		NBClassifier c = new NBClassifier();
-		String csv = "/Users/maddie/Documents/FALL2016/MachineLearning/hw4/titanic-train.perc.csv";
-		DataSet data = new DataSet(csv, 0);
+		String file = "/Users/maddie/Documents/FALL2016/MachineLearning/hw5/wines.train.txt";
+		DataSet data = new DataSet(file, 1);
 		CrossValidationSet cs = new CrossValidationSet(data, 10, true);
 		for (int i = 0; i < cs.getNumSplits(); i++) {
 			double avg = 0.0;
