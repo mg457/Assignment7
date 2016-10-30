@@ -60,15 +60,26 @@ public class NBClassifier implements Classifier {
 	public void train(DataSet data) {
 		// store raw counts
 		ArrayList<Example> examples = data.getData();
-		ArrayList<HashMapCounter<Double>> words = new ArrayList<HashMapCounter<Double>>();
+		//ArrayList<HashMapCounter<Double>> words = new ArrayList<HashMapCounter<Double>>();
+		HashMapCounter<Double> hm = new HashMapCounter<Double>();
+
 		for (Example ex : examples) {
-			HashMapCounter<Double> hm = new HashMapCounter<Double>();
 			for (int i : ex.getFeatureSet()) {
 				hm.put(ex.getFeature(i), 1);
 			}
-			words.add(hm);
+			//words.add(hm);
 		}
 	}
+	
+	//count(x_i, y) = run through each example & when has label y & feature x_i, increment count
+	public int countFeatureandLabel(ArrayList<Example> examples, double feature, int label) {
+		for(Example ex: examples) {
+			
+		}
+		return 0;
+	}
+	
+	//count(y) = run through all examples & when has label y increment count
 
 	@Override
 	public double classify(Example example) {
