@@ -24,6 +24,7 @@ public class NBClassifier implements Classifier {
 	ArrayList<HashMapCounter<Integer>> featureLabelCounts;
 	HashMapCounter<Double> labelCounts;
 	int allExamples;
+	DataSet data;
 
 	/**
 	 * Set the regularization/smoothing parameter to a new value.
@@ -64,6 +65,7 @@ public class NBClassifier implements Classifier {
 	public void train(DataSet data) {
 		// store raw counts
 		allExamples = data.getData().size();
+		this.data = data;
 		featureLabelCounts = countFeaturesandLabels(data);
 		labelCounts = countLabels(data);
 	}
@@ -84,20 +86,20 @@ public class NBClassifier implements Classifier {
 		for (double l : data.getLabels()) {
 			HashMapCounter<Integer> hm = new HashMapCounter<Integer>();
 			// for (int f : data.getAllFeatureIndices()) {
-//			for (Example ex : examples) {
-//				Set<Integer> features = ex.getFeatureSet();
-//				for (int f : features) {
-//					if (ex.getLabel() == l) {
-//						hm.increment(f);
-//					}
-//				}
-//			}
+			// for (Example ex : examples) {
+			// Set<Integer> features = ex.getFeatureSet();
+			// for (int f : features) {
+			// if (ex.getLabel() == l) {
+			// hm.increment(f);
+			// }
+			// }
+			// }
 			// }
 			list.add(hm);
 		}
-		for(Example ex : examples) {
-			HashMapCounter<Integer> current = list.get((int)ex.getLabel());
-			for(int f : ex.getFeatureSet()) {
+		for (Example ex : examples) {
+			HashMapCounter<Integer> current = list.get((int) ex.getLabel());
+			for (int f : ex.getFeatureSet()) {
 				current.increment(f);
 			}
 		}
@@ -182,14 +184,25 @@ public class NBClassifier implements Classifier {
 		double labelCount = labelCounts.get(label);
 		double probY = labelCount / (double) allExamples;// labelCounts.keySet().size();
 		Set<Integer> features = ex.getFeatureSet();
-		double sum = 0.0;
-		// run through all features in dataset and 1-p(xi|y) if not in ex
-		for (int f : features) {
-
-			sum += Math.log(getFeatureProb(f, label));
+		if (usePosOnly) {
+			double sum = 0.0;
+			for (int f : features) {
+				sum += Math.log(getFeatureProb(f, label));
+			}
+			return Math.log(probY) + sum;
+		} else {
+			// run through all features in dataset and add 1-p(xi|y) to sum if
+			// feature not in ex feature set
+			double sum = 0.0;
+			for (int f : data.getAllFeatureIndices()) {
+				if (features.contains(f)) {
+					sum += Math.log(getFeatureProb(f, label));
+				} else {
+					sum += Math.log(1 - getFeatureProb(f, label));
+				}
+			}
+			return Math.log(probY) + sum;
 		}
-		// System.out.println("logproby: " + Math.log(probY) + " sum: " + sum);
-		return Math.log(probY) + sum;
 	}
 
 	/**
