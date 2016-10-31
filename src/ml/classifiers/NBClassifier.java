@@ -158,9 +158,10 @@ public class NBClassifier implements Classifier {
 		ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
 		double sum = 0.0;
 		for(int f : features) {
-			sum += getFeatureProb(f, label);
+			sum += Math.log(getFeatureProb(f, label));
 		}
-		return 0; 
+		
+		return Math.log(probY) + sum; 
 	}
 
 	/**
