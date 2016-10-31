@@ -21,6 +21,9 @@ public class NBClassifier implements Classifier {
 	boolean usePosOnly = false; // tells program whether to use approach in
 								// which only positive features are used to
 								// calculate probabilities
+	ArrayList<HashMapCounter<Integer>> featureLabelCounts;
+	HashMapCounter<Double> labelCounts;
+	
 
 	/**
 	 * Set the regularization/smoothing parameter to a new value.
@@ -51,35 +54,66 @@ public class NBClassifier implements Classifier {
 	}
 
 	/**
-	 * Store the counts for each feature in each example.
+	 * Store the counts for each label and feature/label combination in the data set.
 	 * 
 	 * @param data
-	 *            DataSet for which we are storing feature counts.
+	 *            DataSet for which we are storing label/feature counts.
 	 */
 	@Override
 	public void train(DataSet data) {
 		// store raw counts
-		ArrayList<Example> examples = data.getData();
-		//ArrayList<HashMapCounter<Double>> words = new ArrayList<HashMapCounter<Double>>();
-		HashMapCounter<Double> hm = new HashMapCounter<Double>();
+		featureLabelCounts = countFeaturesandLabels(data);
+		labelCounts = countLabels(data);
+	}
 
-		for (Example ex : examples) {
-			for (int i : ex.getFeatureSet()) {
-				hm.put(ex.getFeature(i), 1);
+
+	/**
+	 * Count the occurences of certain features associated with specific labels.
+	 * 
+	 * @param data
+	 *            Dataset
+	 * @return a list of lists of associations between labels, features indices
+	 *         associated with each label, and counts associated with this
+	 *         combination of labels and feature index
+	 */
+	public ArrayList<HashMapCounter<Integer>> countFeaturesandLabels(DataSet data) {
+		ArrayList<HashMapCounter<Integer>> list = new ArrayList<HashMapCounter<Integer>>();
+		ArrayList<Example> examples = data.getData();
+		for (double l : data.getLabels()) {
+			HashMapCounter<Integer> hm = new HashMapCounter<Integer>();
+			for (int f : data.getAllFeatureIndices()) {
+				for (Example ex : examples) {
+					ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
+					if (features.contains(f) && ex.getLabel() == l) {
+						hm.put(f, 1);
+					}
+				}
 			}
-			//words.add(hm);
+			list.add(hm);
 		}
+		return list;
 	}
-	
-	//count(x_i, y) = run through each example & when has label y & feature x_i, increment count
-	public int countFeatureandLabel(ArrayList<Example> examples, double feature, int label) {
-		for(Example ex: examples) {
-			
+
+	/**
+	 * Store the occurrences of each label within the dataset.
+	 * 
+	 * @param data
+	 *            DataSet
+	 * @return HashMap with (label, occurrences) associations
+	 */
+	public HashMapCounter<Double> countLabels(DataSet data) {
+		HashMapCounter<Double> hmc = new HashMapCounter<Double>();
+		for (double l : data.getLabels()) {
+			for (Example ex : data.getData()) {
+				if (ex.getLabel() == l) {
+					hmc.put(l, 1);
+				}
+			}
 		}
-		return 0;
+		return hmc;
 	}
-	
-	//count(y) = run through all examples & when has label y increment count
+
+
 
 	@Override
 	public double classify(Example example) {
