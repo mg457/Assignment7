@@ -83,13 +83,9 @@ public class NBClassifier implements Classifier {
 			HashMapCounter<Integer> hm = new HashMapCounter<Integer>();
 			for (int f : data.getAllFeatureIndices()) {
 				for (Example ex : examples) {
-					ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
+					Set<Integer> features = ex.getFeatureSet();
 					if (features.contains(f) && ex.getLabel() == l) {
-						if (hm.get(f) != 0) {
-							hm.increment(f);
-						} else {
-							hm.put(f, 1);
-						}
+							hm.increment(f);		
 					}
 				}
 			}
@@ -122,10 +118,28 @@ public class NBClassifier implements Classifier {
 		return hmc;
 	}
 
+	/**
+	 * Method which classifies a given example using the equation: 
+	 * label =  argmax_{y in labels} log(p(y)) + sum(log(p(x_i | y)))
+	 * 
+	 * @param example
+	 *            Example to be classified
+	 * @return classification for example
+	 */
 	@Override
 	public double classify(Example example) {
-		// TODO Auto-generated method stub
-		return 0;
+		double max = -100000000000.0;
+		double curLabel = 0.0;
+		for (double label : labelCounts.keySet()) {
+			double logProb = getLogProb(example, label);
+			//System.out.println("logprob: " + logProb);
+			if (max < logProb) {
+				max = logProb;
+				curLabel = label;
+			}
+		}
+		//System.out.println("max: "+ max + " curLabel: " + curLabel);
+		return curLabel;
 	}
 
 	/**
@@ -138,8 +152,12 @@ public class NBClassifier implements Classifier {
 	 */
 	@Override
 	public double confidence(Example example) {
-		// TODO Auto-generated method stub
-		return 0;
+		//store all log probabilities in an ArrayList and return the maximum
+		ArrayList<Double> probs = new ArrayList<Double>();
+		for(double label : labelCounts.keySet()) {
+			probs.add(getLogProb(example, label));
+		}
+		return Collections.max(probs);
 	}
 
 	/**
@@ -153,15 +171,15 @@ public class NBClassifier implements Classifier {
 	 * @return p(x_1, x_2,...,x_m, y)
 	 */
 	public double getLogProb(Example ex, double label) {
-		int labelCount = labelCounts.get(label);
-		double probY = labelCount / labelCounts.size();
-		ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
+		double labelCount = labelCounts.get(label);
+		double probY = labelCount / labelCounts.keySet().size();
+		Set<Integer> features =  ex.getFeatureSet();
 		double sum = 0.0;
-		for(int f : features) {
+		for (int f : features) {
 			sum += Math.log(getFeatureProb(f, label));
 		}
-		
-		return Math.log(probY) + sum; 
+		//System.out.println("logproby: " + Math.log(probY) + " sum: " + sum);
+		return Math.log(probY) + sum;
 	}
 
 	/**
@@ -177,7 +195,8 @@ public class NBClassifier implements Classifier {
 		// P(x_i | y) = P(x_i and y) + lambda / P(y) + (# of possible values of
 		// x_i) * lambda
 		double prob = (featureLabelCount + lambda)
-				/ (labelCount + (double) featureLabelCounts.get((int) label).size() * lambda);
+				/ (labelCount+  2* lambda);//(double) featureLabelCounts.get((int) label).size()
+		//System.out.println("returned: " + prob);
 		return prob;
 	}
 
@@ -190,18 +209,20 @@ public class NBClassifier implements Classifier {
 			double avg = 0.0;
 			DataSetSplit dss = cs.getValidationSet(i);
 
-			for (int iter = 0; iter < 100; iter++) {
+			//for (int iter = 0; iter < 100; iter++) {
 				c.train(dss.getTrain());
 				double acc = 0.0;
 				double size = dss.getTest().getData().size();
 				for (Example ex : dss.getTest().getData()) {
 					if (c.classify(ex) == ex.getLabel()) {
-						acc += 1.0 / size;
+						acc += 1.0;
 					}
 				}
-				avg += acc / 100.0;
-			}
-			System.out.println(avg);
+				System.out.println("acc: " + acc/size);
+
+				//avg += acc / 100.0;
+			//}
+			//System.out.println(avg);
 		}
 
 	}
