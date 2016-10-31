@@ -23,7 +23,6 @@ public class NBClassifier implements Classifier {
 								// calculate probabilities
 	ArrayList<HashMapCounter<Integer>> featureLabelCounts;
 	HashMapCounter<Double> labelCounts;
-	
 
 	/**
 	 * Set the regularization/smoothing parameter to a new value.
@@ -54,7 +53,8 @@ public class NBClassifier implements Classifier {
 	}
 
 	/**
-	 * Store the counts for each label and feature/label combination in the data set.
+	 * Store the counts for each label and feature/label combination in the data
+	 * set.
 	 * 
 	 * @param data
 	 *            DataSet for which we are storing label/feature counts.
@@ -65,7 +65,6 @@ public class NBClassifier implements Classifier {
 		featureLabelCounts = countFeaturesandLabels(data);
 		labelCounts = countLabels(data);
 	}
-
 
 	/**
 	 * Count the occurences of certain features associated with specific labels.
@@ -79,13 +78,18 @@ public class NBClassifier implements Classifier {
 	public ArrayList<HashMapCounter<Integer>> countFeaturesandLabels(DataSet data) {
 		ArrayList<HashMapCounter<Integer>> list = new ArrayList<HashMapCounter<Integer>>();
 		ArrayList<Example> examples = data.getData();
+		// for each label, store a list of features with associated counts
 		for (double l : data.getLabels()) {
 			HashMapCounter<Integer> hm = new HashMapCounter<Integer>();
 			for (int f : data.getAllFeatureIndices()) {
 				for (Example ex : examples) {
 					ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
 					if (features.contains(f) && ex.getLabel() == l) {
-						hm.put(f, 1);
+						if (hm.get(f) != 0) {
+							hm.increment(f);
+						} else {
+							hm.put(f, 1);
+						}
 					}
 				}
 			}
@@ -103,17 +107,20 @@ public class NBClassifier implements Classifier {
 	 */
 	public HashMapCounter<Double> countLabels(DataSet data) {
 		HashMapCounter<Double> hmc = new HashMapCounter<Double>();
+		// for each label, store a count of occurences of this label in dataset
 		for (double l : data.getLabels()) {
 			for (Example ex : data.getData()) {
 				if (ex.getLabel() == l) {
-					hmc.put(l, 1);
+					if (hmc.get(l) != 0) {
+						hmc.increment(l);
+					} else {
+						hmc.put(l, 1);
+					}
 				}
 			}
 		}
 		return hmc;
 	}
-
-
 
 	@Override
 	public double classify(Example example) {
@@ -142,22 +149,35 @@ public class NBClassifier implements Classifier {
 	 * @param ex
 	 *            Example for which to calculate log probability.
 	 * @param label
-	 *            Label to be used to calculate log probability.
+	 *            Label for which to calculate log probability.
 	 * @return p(x_1, x_2,...,x_m, y)
 	 */
 	public double getLogProb(Example ex, double label) {
-		return 0; // TODO
+		int labelCount = labelCounts.get(label);
+		double probY = labelCount / labelCounts.size();
+		ArrayList<Integer> features = (ArrayList<Integer>) ex.getFeatureSet();
+		double sum = 0.0;
+		for(int f : features) {
+			sum += getFeatureProb(f, label);
+		}
+		return 0; 
 	}
 
 	/**
-	 * Return the probability of a given feature index given a
+	 * Return the probability of a given feature index given a label
 	 * 
 	 * @param featureIndex
 	 * @param label
 	 * @return
 	 */
 	public double getFeatureProb(int featureIndex, double label) {
-		return 0; // TODO
+		double labelCount = labelCounts.get(label);
+		double featureLabelCount = featureLabelCounts.get((int) label).get(featureIndex);
+		// P(x_i | y) = P(x_i and y) + lambda / P(y) + (# of possible values of
+		// x_i) * lambda
+		double prob = (featureLabelCount + lambda)
+				/ (labelCount + (double) featureLabelCounts.get((int) label).size() * lambda);
+		return prob;
 	}
 
 	public static void main(String[] args) {
