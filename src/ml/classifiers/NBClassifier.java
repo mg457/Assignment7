@@ -23,6 +23,7 @@ public class NBClassifier implements Classifier {
 								// calculate probabilities
 	ArrayList<HashMapCounter<Integer>> featureLabelCounts;
 	HashMapCounter<Double> labelCounts;
+	int allExamples;
 
 	/**
 	 * Set the regularization/smoothing parameter to a new value.
@@ -62,6 +63,7 @@ public class NBClassifier implements Classifier {
 	@Override
 	public void train(DataSet data) {
 		// store raw counts
+		allExamples = data.getData().size();
 		featureLabelCounts = countFeaturesandLabels(data);
 		labelCounts = countLabels(data);
 	}
@@ -81,15 +83,23 @@ public class NBClassifier implements Classifier {
 		// for each label, store a list of features with associated counts
 		for (double l : data.getLabels()) {
 			HashMapCounter<Integer> hm = new HashMapCounter<Integer>();
-			for (int f : data.getAllFeatureIndices()) {
-				for (Example ex : examples) {
-					Set<Integer> features = ex.getFeatureSet();
-					if (features.contains(f) && ex.getLabel() == l) {
-							hm.increment(f);		
-					}
-				}
-			}
+			// for (int f : data.getAllFeatureIndices()) {
+//			for (Example ex : examples) {
+//				Set<Integer> features = ex.getFeatureSet();
+//				for (int f : features) {
+//					if (ex.getLabel() == l) {
+//						hm.increment(f);
+//					}
+//				}
+//			}
+			// }
 			list.add(hm);
+		}
+		for(Example ex : examples) {
+			HashMapCounter<Integer> current = list.get((int)ex.getLabel());
+			for(int f : ex.getFeatureSet()) {
+				current.increment(f);
+			}
 		}
 		return list;
 	}
@@ -107,11 +117,9 @@ public class NBClassifier implements Classifier {
 		for (double l : data.getLabels()) {
 			for (Example ex : data.getData()) {
 				if (ex.getLabel() == l) {
-					if (hmc.get(l) != 0) {
-						hmc.increment(l);
-					} else {
-						hmc.put(l, 1);
-					}
+
+					hmc.increment(l);
+
 				}
 			}
 		}
@@ -119,8 +127,8 @@ public class NBClassifier implements Classifier {
 	}
 
 	/**
-	 * Method which classifies a given example using the equation: 
-	 * label =  argmax_{y in labels} log(p(y)) + sum(log(p(x_i | y)))
+	 * Method which classifies a given example using the equation: label =
+	 * argmax_{y in labels} log(p(y)) + sum(log(p(x_i | y)))
 	 * 
 	 * @param example
 	 *            Example to be classified
@@ -132,13 +140,13 @@ public class NBClassifier implements Classifier {
 		double curLabel = 0.0;
 		for (double label : labelCounts.keySet()) {
 			double logProb = getLogProb(example, label);
-			//System.out.println("logprob: " + logProb);
+			// System.out.println("logprob: " + logProb);
 			if (max < logProb) {
 				max = logProb;
 				curLabel = label;
 			}
 		}
-		//System.out.println("max: "+ max + " curLabel: " + curLabel);
+		// System.out.println("max: "+ max + " curLabel: " + curLabel);
 		return curLabel;
 	}
 
@@ -152,9 +160,9 @@ public class NBClassifier implements Classifier {
 	 */
 	@Override
 	public double confidence(Example example) {
-		//store all log probabilities in an ArrayList and return the maximum
+		// store all log probabilities in an ArrayList and return the maximum
 		ArrayList<Double> probs = new ArrayList<Double>();
-		for(double label : labelCounts.keySet()) {
+		for (double label : labelCounts.keySet()) {
 			probs.add(getLogProb(example, label));
 		}
 		return Collections.max(probs);
@@ -172,13 +180,15 @@ public class NBClassifier implements Classifier {
 	 */
 	public double getLogProb(Example ex, double label) {
 		double labelCount = labelCounts.get(label);
-		double probY = labelCount / labelCounts.keySet().size();
-		Set<Integer> features =  ex.getFeatureSet();
+		double probY = labelCount / (double) allExamples;// labelCounts.keySet().size();
+		Set<Integer> features = ex.getFeatureSet();
 		double sum = 0.0;
+		// run through all features in dataset and 1-p(xi|y) if not in ex
 		for (int f : features) {
+
 			sum += Math.log(getFeatureProb(f, label));
 		}
-		//System.out.println("logproby: " + Math.log(probY) + " sum: " + sum);
+		// System.out.println("logproby: " + Math.log(probY) + " sum: " + sum);
 		return Math.log(probY) + sum;
 	}
 
@@ -194,9 +204,10 @@ public class NBClassifier implements Classifier {
 		double featureLabelCount = featureLabelCounts.get((int) label).get(featureIndex);
 		// P(x_i | y) = P(x_i and y) + lambda / P(y) + (# of possible values of
 		// x_i) * lambda
-		double prob = (featureLabelCount + lambda)
-				/ (labelCount+  2* lambda);//(double) featureLabelCounts.get((int) label).size()
-		//System.out.println("returned: " + prob);
+		double prob = (featureLabelCount + lambda) / (labelCount + 2 * lambda);// (double)
+																				// featureLabelCounts.get((int)
+																				// label).size()
+		// System.out.println("returned: " + prob);
 		return prob;
 	}
 
@@ -209,20 +220,20 @@ public class NBClassifier implements Classifier {
 			double avg = 0.0;
 			DataSetSplit dss = cs.getValidationSet(i);
 
-			//for (int iter = 0; iter < 100; iter++) {
-				c.train(dss.getTrain());
-				double acc = 0.0;
-				double size = dss.getTest().getData().size();
-				for (Example ex : dss.getTest().getData()) {
-					if (c.classify(ex) == ex.getLabel()) {
-						acc += 1.0;
-					}
+			// for (int iter = 0; iter < 100; iter++) {
+			c.train(dss.getTrain());
+			double acc = 0.0;
+			double size = dss.getTest().getData().size();
+			for (Example ex : dss.getTest().getData()) {
+				if (c.classify(ex) == ex.getLabel()) {
+					acc += 1.0;
 				}
-				System.out.println("acc: " + acc/size);
+			}
+			System.out.println("acc: " + acc / size);
 
-				//avg += acc / 100.0;
-			//}
-			//System.out.println(avg);
+			// avg += acc / 100.0;
+			// }
+			// System.out.println(avg);
 		}
 
 	}
